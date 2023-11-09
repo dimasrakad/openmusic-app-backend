@@ -62,7 +62,7 @@ class AlbumsService {
     };
   }
 
-  deleteAlbumByIdHandler(id) {
+  deleteAlbumById(id) {
     const index = this._albums.findIndex((album) => album.id === id);
 
     if (index === -1) {

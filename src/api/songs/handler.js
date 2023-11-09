@@ -1,18 +1,20 @@
-class MusicsHandler {
+const ClientError = require("../../exceptions/ClientError");
+
+class SongsHandler {
   constructor(service, validator) {
     this._service = service;
     this._validator = validator;
 
-    this.postMusicHandler = this.postMusicHandler.bind(this);
-    this.getMusicsHandler = this.getMusicsHandler.bind(this);
-    this.getMusicByIdHandler = this.getMusicByIdHandler.bind(this);
-    this.putMusicByIdHandler = this.putMusicByIdHandler.bind(this);
-    this.deleteMusicByIdHandler = this.deleteMusicByIdHandler.bind(this);
+    this.postSongHandler = this.postSongHandler.bind(this);
+    this.getSongsHandler = this.getSongsHandler.bind(this);
+    this.getSongByIdHandler = this.getSongByIdHandler.bind(this);
+    this.putSongByIdHandler = this.putSongByIdHandler.bind(this);
+    this.deleteSongByIdHandler = this.deleteSongByIdHandler.bind(this);
   }
 
-  postMusicHandler(request, h) {
+  async postSongHandler(request, h) {
     try {
-      this._validator.validateNotePayload(request.payload);
+      this._validator.validateSongPayload(request.payload);
       const {
         title = "untitled",
         year,
@@ -22,7 +24,7 @@ class MusicsHandler {
         albumId,
       } = request.payload;
 
-      const musicId = this._service.addMusic({
+      const songId = await this._service.addSong({
         title,
         year,
         genre,
@@ -33,9 +35,9 @@ class MusicsHandler {
 
       const response = h.response({
         status: "success",
-        message: "Musik berhasil ditambahkan",
+        message: "Lagu berhasil ditambahkan",
         data: {
-          musicId,
+          songId,
         },
       });
       response.code(201);
@@ -61,24 +63,14 @@ class MusicsHandler {
     }
   }
 
-  getMusicsHandler() {
-    const musics = this._service.getMusics();
-    return {
-      status: "success",
-      data: {
-        musics,
-      },
-    };
-  }
-
-  getMusicByIdHandler(request, h) {
+  async getSongsHandler(request, h) {
     try {
-      const { id } = request.params;
-      const music = this._service.getMusicById(id);
+      const {title, performer} = request.query;
+      const songs = await this._service.getSongs(title, performer);
       return {
         status: "success",
         data: {
-          music,
+          songs,
         },
       };
     } catch (error) {
@@ -102,16 +94,15 @@ class MusicsHandler {
     }
   }
 
-  putMusicByIdHandler(request, h) {
-    this._validator.validateNotePayload(request.payload);
+  async getSongByIdHandler(request, h) {
     try {
       const { id } = request.params;
-
-      this._service.editNoteById(id, request.payload);
-
+      const song = await this._service.getSongById(id);
       return {
         status: "success",
-        message: "Musik berhasil diperbarui",
+        data: {
+          song,
+        },
       };
     } catch (error) {
       if (error instanceof ClientError) {
@@ -134,13 +125,45 @@ class MusicsHandler {
     }
   }
 
-  deleteMusicByIdHandler(request, h) {
+  async putSongByIdHandler(request, h) {
     try {
+      this._validator.validateSongPayload(request.payload);
       const { id } = request.params;
-      this._service.deleteMusicById(id);
+
+      await this._service.editSongById(id, request.payload);
+
       return {
         status: "success",
-        message: "Musik berhasil dihapus",
+        message: "Lagu berhasil diperbarui",
+      };
+    } catch (error) {
+      if (error instanceof ClientError) {
+        const response = h.response({
+          status: "fail",
+          message: error.message,
+        });
+        response.code(error.statusCode);
+        return response;
+      }
+
+      // Server ERROR!
+      const response = h.response({
+        status: "error",
+        message: "Maaf, terjadi kegagalan pada server kami.",
+      });
+      response.code(500);
+      console.error(error);
+      return response;
+    }
+  }
+
+  async deleteSongByIdHandler(request, h) {
+    try {
+      const { id } = request.params;
+      await this._service.deleteSongById(id);
+      return {
+        status: "success",
+        message: "Lagu berhasil dihapus",
       };
     } catch (error) {
       if (error instanceof ClientError) {
@@ -164,4 +187,4 @@ class MusicsHandler {
   }
 }
 
-module.exports = MusicsHandler;
+module.exports = SongsHandler;
